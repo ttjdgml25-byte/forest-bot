@@ -21,34 +21,33 @@ def send_telegram(message):
 def main():
     print("=== 휴양림 API 테스트 ===")
 
-    # 여러 파라미터 조합 시도
-    param_sets = [
-        ("기본", {"serviceKey": API_KEY, "pageNo": "1", "numOfRows": "3"}),
-        ("type추가", {"serviceKey": API_KEY, "pageNo": "1", "numOfRows": "3", "_type": "xml"}),
-    ]
+    # numOfRows를 1로 최소화, 타임아웃 60초로 증가
+    params = {
+        "serviceKey": API_KEY,
+        "pageNo": "1",
+        "numOfRows": "1",
+    }
 
-    for name, params in param_sets:
-        try:
-            res = requests.get(URL, params=params, timeout=15)
-            print(f"\n[{name}] 상태: {res.status_code}")
-            print(f"응답: {res.text[:800]}")
+    try:
+        res = requests.get(URL, params=params, timeout=60)
+        print(f"상태: {res.status_code}")
+        print(f"응답: {res.text[:1500]}")
 
-            soup = BeautifulSoup(res.content, "xml")
-            total = soup.find("totalCount")
-            result_msg = soup.find("resultMsg") or soup.find("resultMessage")
-            total_txt = total.get_text() if total else "?"
-            msg_txt = result_msg.get_text() if result_msg else "?"
+        soup = BeautifulSoup(res.content, "xml")
+        total = soup.find("totalCount")
+        result_msg = soup.find("resultMsg") or soup.find("resultMessage")
+        total_txt = total.get_text() if total else "?"
+        msg_txt = result_msg.get_text() if result_msg else "?"
 
-            # 첫 번째 item 구조 확인
-            first_item = soup.find("item")
-            item_structure = str(first_item)[:600] if first_item else "item 없음"
+        first_item = soup.find("item")
+        item_structure = str(first_item)[:900] if first_item else "item 없음. 전체응답:\n" + res.text[:600]
 
-            tg_msg = f"🏕 [{name}] 테스트\n상태: {res.status_code}\ntotalCount: {total_txt}\nmsg: {msg_txt}\n\n구조:\n{item_structure}"
-            send_telegram(tg_msg)
+        tg_msg = f"🏕 휴양림 API 테스트\n상태: {res.status_code}\ntotalCount: {total_txt}\nmsg: {msg_txt}\n\n구조:\n{item_structure}"
+        send_telegram(tg_msg)
 
-        except Exception as e:
-            print(f"[{name}] 오류: {e}")
-            send_telegram(f"❌ [{name}] 오류: {str(e)[:200]}")
+    except Exception as e:
+        print(f"오류: {e}")
+        send_telegram(f"❌ 오류: {str(e)[:200]}")
 
 
 if __name__ == "__main__":
